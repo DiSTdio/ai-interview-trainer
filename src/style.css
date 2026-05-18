@@ -1,0 +1,34 @@
+:root {
+  --bg: #16171d;
+
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --border: #2e303a;
+  --accent: #81c784;
+
+  --user-color: #4fc3f7;
+  --font-main: system-ui, sans-serif;
+
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-main);
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+}
+
+
+h1 {
+  font-size: 38px;
+  color: var(--text-h);
+  text-align: center;
+  margin: 17px;
+}
