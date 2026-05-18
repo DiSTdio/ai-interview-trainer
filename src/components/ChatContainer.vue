@@ -300,7 +300,7 @@ const send = async () => {
 
     try {
         const res = await fetch(
-            "http://localhost:8080/ai",
+            "https://ai-interview-trainer-ey0u.onrender.com/ai",
             {
                 method: "POST",
                 signal: controller.signal,
