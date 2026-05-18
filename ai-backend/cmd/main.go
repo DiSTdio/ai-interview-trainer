@@ -17,7 +17,7 @@ func main() {
 	l := rate.New(5, 10*time.Second)
 
 	llmClient := llm.New(
-		"http://localhost:11434",
+		"http://host.docker.internal:11434",
 		"qwen2.5-coder:3b",
 	)
 

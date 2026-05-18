@@ -47,28 +47,27 @@ export const evaluate = (
         }
     }
 
-    const short =
-        answer.trim().length
+    const len = answer.trim().length
 
     if (len < 40) {
-    return {
-        score: 4,
-        text:
-            `Not quite. Needs more depth.\n\n${nextQuestion}`
+        return {
+            score: 4,
+            text:
+                `Not quite. Needs more depth.\n\n${nextQuestion}`
+        }
     }
-}
 
-if (len < 120) {
-    return {
-        score: 7,
-        text:
-            `Solid answer. Could go deeper.\n\n${nextQuestion}`
+    if (len < 120) {
+        return {
+            score: 7,
+            text:
+                `Solid answer. Could go deeper.\n\n${nextQuestion}`
+        }
     }
-}
 
-return {
-    score: 9,
-    text:
-        `Excellent depth and reasoning.\n\n${nextQuestion}`
-}
+    return {
+        score: 9,
+        text:
+            `Excellent depth and reasoning.\n\n${nextQuestion}`
+    }
 }

@@ -18,11 +18,9 @@
             </button>
 
         </div>
-        <div v-if="
-            props.edition === 'mini' &&
-            props.mode !== 'chat' &&
-            !topicSelected
-        " class="topic-picker">
+        <div v-if="!topicSelected
+            && (props.edition === 'full'
+                || props.mode !== 'chat')" class="topic-picker">
 
             <div class="ai-msg">
                 Choose role / qualification
@@ -300,7 +298,7 @@ const send = async () => {
 
     try {
         const res = await fetch(
-            "https://ai-interview-trainer-ey0u.onrender.com/ai",
+            "http://localhost:8080/ai",
             {
                 method: "POST",
                 signal: controller.signal,

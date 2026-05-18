@@ -89,6 +89,11 @@ Open browser:
 http://localhost:5173
 7. Launch Full Edition
 
+Disclosure: 
+If no local LLM is running, Full Edition will connect but no response will appear (system intentionally supports local private inference).
+Mini Edition works instantly without installation.
+Full Edition is in early access. Expect some rough edges and occasional hiccups as I fine-tune the experience.
+
 Choose:
 
 Full Edition
