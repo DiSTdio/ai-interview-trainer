@@ -1,142 +1,136 @@
-AI Interview Trainer
+# AI Interview Trainer
 
-An interactive technical interview simulator built with Vue 3, Go and local LLM inference through Ollama.
+An interactive technical interview simulator built with **Vue 3**, **Go** and local LLM inference through **Ollama**.
 
-Live demo: ai-interview-trainer.netlify.app
-Repository: github.com/DiSTdio/ai-interview-trainer
+- Live demo: https://ai-interview-trainer.netlify.app  
+- Repository: https://github.com/DiSTdio/ai-interview-trainer
 
-Overview
+---
+
+## Overview
 
 AI Interview Trainer explores two different approaches to building an AI-style interview interface:
 
-MiniAI — a lightweight browser-only simulation with predefined technical topics and deterministic evaluation logic.
-W Edition — a local-first LLM implementation using a Go API and Ollama for real streamed model responses.
+- **MiniAI** — a lightweight browser-only simulation with predefined technical topics and deterministic evaluation logic.  
+- **W Edition** — a local-first LLM implementation using a Go API and Ollama for real streamed model responses.
 
 The goal of the project was not only to create a chat UI, but to experiment with the full request flow between a reactive frontend, an API service, prompt construction, session memory and streamed LLM output.
 
-Features
-Two execution modes
-MiniAI
+---
 
-Runs entirely in the browser and requires no backend or model installation.
+## Features
 
-It uses predefined question sets and lightweight client-side evaluation logic to reproduce the application flow without external AI infrastructure.
+### Two execution modes
 
-This makes the public demo immediately accessible and allows the interface and interview workflow to be tested independently from the LLM environment.
+#### MiniAI
 
-W Edition
+- Runs entirely in the browser and requires no backend or model installation.  
+- Uses predefined question sets and lightweight client-side evaluation logic to reproduce the application flow without external AI infrastructure.  
+- Makes the public demo immediately accessible and allows the interface and interview workflow to be tested independently from the LLM environment.
 
-Runs with a local LLM through Ollama.
+#### W Edition
 
-The Vue frontend sends session data to a Go API. The backend constructs a mode-specific prompt, forwards it to Ollama and streams generated tokens back to the browser.
+- Runs with a local LLM through Ollama.  
+- The Vue frontend sends session data to a Go API; the backend constructs a mode-specific prompt, forwards it to Ollama and streams generated tokens back to the browser.  
+- Intended to run locally because model inference remains on the user's machine.
 
-W Edition is intended to run locally because model inference remains on the user's machine.
+---
 
-Session modes
-💬 Practice Chat
+## Session modes
 
-A casual technical discussion mode focused on coding, frontend, backend and architecture.
+### 💬 Practice Chat
 
-In MiniAI, responses are selected from lightweight discussion prompts.
+- Casual technical discussion mode focused on coding, frontend, backend and architecture.  
+- In MiniAI, responses are selected from lightweight discussion prompts.  
+- In W Edition, the user's input is forwarded to the local LLM as an open technical conversation.
 
-In W Edition, the user's input is forwarded to the local LLM as an open technical conversation.
+### 🎯 Interview
 
-🎯 Interview
+- Simulates a technical interview.  
+- The user selects a qualification or technology area and answers interview questions related to that topic.  
+- Available topics include: **Frontend, Backend, QA, AWS, DevOps, React, Vue, JavaScript, TypeScript, Golang**.  
+- The LLM edition uses conversation history to preserve interview context between requests.
 
-Simulates a technical interview.
+### ⚡ Judge
 
-The user selects a qualification or technology area and answers interview questions related to that topic.
+- Stricter interview mode with scoring and feedback.  
+- The backend instructs the model to evaluate the candidate's answer, explain weaknesses and continue with a harder question.  
+- Scores are extracted from the generated response and reflected in the chat UI.
 
-Available topics currently include:
+---
 
-Frontend
-Backend
-QA
-AWS
-DevOps
-React
-Vue
-JavaScript
-TypeScript
-Golang
+## Architecture
 
-The LLM edition uses conversation history to preserve interview context between requests.
+```text
+┌─────────────────────┐
+│      Vue 3 UI       │
+│       + Vite        │
+└──────────┬──────────┘
+           │
+ ┌─────────┴─────────┐
+ │                   │
+MiniAI           W Edition
+ │                   │
+Browser evaluator   HTTP POST
+Predefined Qs          │
+No backend             ▼
+               ┌─────────────────┐
+               │     Go API      │
+               │    /ai endpoint │
+               └────────┬────────┘
+                        │
+      ┌─────────────────┼─────────────────┐
+      │                 │                 │
+Prompt Builder    Session Memory     Rate Limiter
+      │                 │                 │
+      └─────────────────┼─────────────────┘
+                        │
+                        ▼
+               ┌─────────────────┐
+               │     Ollama      │
+               │ Local LLM model │
+               └────────┬────────┘
+                        │
+                 streamed chunks
+                        │
+                        ▼
+                     Vue UI
+```
 
-⚡ Judge
+### Request flow
 
-A stricter interview mode with scoring and feedback.
+1. The user selects an edition and session mode.  
+2. Interview and Judge modes allow the user to select a technical topic.  
+3. The frontend sends `user_id`, `mode`, `judge`, `topic` and the current input to the Go API.  
+4. The backend retrieves recent session history and builds a prompt for the selected mode.  
+5. The prompt is sent to the Ollama `/api/generate` endpoint with streaming enabled.  
+6. The Go API forwards generated chunks to the browser as a Server-Sent Events style stream.  
+7. Vue incrementally appends incoming text to the active AI message.  
+8. In Judge mode, the backend extracts the score from the completed model response.  
+9. The latest conversation messages are retained in bounded in-memory session history.
 
-The backend instructs the model to evaluate the candidate's answer, explain weaknesses and continue with a harder question.
+---
 
-Scores are extracted from the generated response and reflected in the chat UI.
+## Frontend
 
-Architecture
-                    ┌─────────────────────┐
-                    │      Vue 3 UI       │
-                    │       + Vite        │
-                    └──────────┬──────────┘
-                               │
-                 ┌─────────────┴─────────────┐
-                 │                           │
-            MiniAI                      W Edition
-                 │                           │
-      Browser-side evaluator             HTTP POST
-      Predefined questions                  │
-      No backend required                   ▼
-                                    ┌─────────────────┐
-                                    │     Go API      │
-                                    │    /ai endpoint │
-                                    └────────┬────────┘
-                                             │
-                         ┌───────────────────┼───────────────────┐
-                         │                   │                   │
-                    Prompt Builder      Session Memory      Rate Limiter
-                         │                   │                   │
-                         └───────────────────┼───────────────────┘
-                                             │
-                                             ▼
-                                    ┌─────────────────┐
-                                    │     Ollama      │
-                                    │ Local LLM model │
-                                    └────────┬────────┘
-                                             │
-                                      streamed chunks
-                                             │
-                                             ▼
-                                         Vue UI
-Request flow
-The user selects an edition and session mode.
-Interview and Judge modes allow the user to select a technical topic.
-The frontend sends user_id, mode, judge, topic and the current input to the Go API.
-The backend retrieves recent session history and builds a prompt for the selected mode.
-The prompt is sent to the Ollama /api/generate endpoint with streaming enabled.
-The Go API forwards generated chunks to the browser as a Server-Sent Events style stream.
-Vue incrementally appends incoming text to the active AI message.
-In Judge mode, the backend extracts the score from the completed model response.
-The latest conversation messages are retained in bounded in-memory session history.
-Frontend
+Built with:
 
-The frontend is built with:
+- Vue 3  
+- Composition API and `<script setup>`  
+- Vite  
+- JavaScript  
+- Scoped component CSS
 
-Vue 3
-Composition API
-<script setup>
-Vite
-JavaScript
-Scoped component CSS
+Stage-based UI flow:
 
-The application uses a simple stage-based UI flow:
-
-Edition selection
-        ↓
-W Edition setup guide (Full Edition only)
-        ↓
-Session configuration
-        ↓
-Chat / Interview UI
+1. Edition selection  
+2. W Edition setup guide (Full Edition only)  
+3. Session configuration  
+4. Chat / Interview UI
 
 Main frontend components:
 
+```text
 src/
 ├── App.vue
 └── components/
@@ -147,23 +141,26 @@ src/
     └── mini/
         ├── evaluator.js
         └── questions.js
+```
 
-ChatContainer.vue handles both MiniAI and W Edition interaction flows.
+`ChatContainer.vue` handles both MiniAI and W Edition interaction flows:
 
-The component includes:
+- Reactive message state  
+- Topic selection  
+- Streamed response rendering  
+- Typing state  
+- Abortable requests  
+- Auto-scroll  
+- Dynamic textarea height  
+- Score-based visual feedback
 
-reactive message state
-topic selection
-streamed response rendering
-typing state
-abortable requests
-auto-scroll
-dynamic textarea height
-score-based visual feedback
-Backend
+---
 
-The backend is written in Go and deliberately split into small packages with focused responsibilities.
+## Backend
 
+Backend is written in Go and split into focused packages:
+
+```text
 ai-backend/
 ├── cmd/
 │   └── main.go
@@ -182,244 +179,207 @@ ai-backend/
 │       └── limiter.go
 ├── Dockerfile
 └── go.mod
-API layer
+```
 
-The /ai handler:
+### API layer (`/ai` handler)
 
-decodes incoming JSON
-validates the user ID
-applies per-user rate limiting
-retrieves session history
-selects the appropriate prompt strategy
-starts LLM generation
-streams output to the client
-extracts Judge scores
-updates conversation history
-LLM client
+- Decodes incoming JSON and validates the user ID.  
+- Applies per-user rate limiting.  
+- Retrieves session history and selects the appropriate prompt strategy.  
+- Starts LLM generation and streams output to the client.  
+- Extracts Judge scores and updates conversation history.
 
-The Ollama client communicates with:
+### LLM client
 
-/api/generate
+- Communicates with Ollama via `/api/generate`.  
+- Uses streaming mode; each response chunk is forwarded to the browser immediately instead of waiting for the full response.
 
-Generation uses streaming mode.
+### Prompt builder
 
-Each Ollama response chunk is immediately forwarded to the browser instead of waiting for the complete model response.
+- Separates prompt behavior from HTTP handling.  
+- Builds different instructions for:
+  - Normal technical chat  
+  - Helpful technical interview  
+  - Strict Judge interview  
+- Interview prompts include the selected topic and recent conversation context.
 
-Prompt builder
+### Session memory
 
-Prompt behavior is separated from the HTTP handler.
+- Conversation history stored in-memory and grouped by `user_id`.  
+- Uses `sync.RWMutex` for concurrency safety.  
+- Retains only the latest 10 messages per user to keep context bounded.  
+- Intentionally avoids a database for this prototype.
 
-The backend currently builds different instructions for:
+### Rate limiting
 
-normal technical chat
-helpful technical interview
-strict Judge interview
+- Lightweight per-user sliding-window limiter.  
+- Current config: 5 requests within a 10-second window per user ID.
 
-Interview prompts also include the selected topic and recent conversation context.
+### Judge score extraction
 
-Session memory
+- Judge mode asks the LLM to return `Score: X/10`.  
+- After generation, the API extracts the numeric score via regex and sends it as a separate stream event.  
+- The UI maps the score to visual feedback states.
 
-Conversation history is stored in memory and grouped by user_id.
+---
 
-The history implementation uses sync.RWMutex to protect concurrent access.
+## Tech stack
 
-Only the latest 10 messages are retained for each user, keeping prompt context bounded.
+| Layer              | Technology                          |
+|--------------------|-------------------------------------|
+| Frontend           | Vue 3                               |
+| Build tool         | Vite                                |
+| Frontend language  | JavaScript                          |
+| Backend            | Go                                  |
+| LLM runtime        | Ollama                              |
+| Default model      | Qwen2.5-Coder 3B                    |
+| Streaming          | HTTP streaming / SSE-style events   |
+| Session state      | In-memory Go store                  |
+| Concurrency safety | `sync.RWMutex` / `sync.Mutex`       |
+| Backend packaging  | Docker                              |
+| Public demo        | Netlify                             |
 
-The current implementation intentionally does not use a database.
+---
 
-Rate limiting
+## Running MiniAI
 
-The backend contains a lightweight per-user sliding-window rate limiter.
+MiniAI requires only the frontend:
 
-The current server configuration allows five requests within a ten-second window for each user ID.
-
-Judge score extraction
-
-Judge mode asks the LLM to return a score using a Score: X/10 style format.
-
-After generation completes, the API uses a regular expression to extract the numeric score and sends it to the frontend as a separate stream event.
-
-The UI maps the score to visual feedback states.
-
-Tech stack
-Layer	Technology
-Frontend	Vue 3
-Build tool	Vite
-Frontend language	JavaScript
-Backend	Go
-LLM runtime	Ollama
-Default model	Qwen2.5-Coder 3B
-Streaming	HTTP streaming / SSE-style events
-Session state	In-memory Go store
-Concurrency safety	sync.RWMutex / sync.Mutex
-Backend packaging	Docker
-Public frontend demo	Netlify
-Running MiniAI
-
-MiniAI requires only the frontend.
-
+```bash
 git clone https://github.com/DiSTdio/ai-interview-trainer.git
 cd ai-interview-trainer
 
 npm install
 npm run dev
+```
 
-Open:
-
-http://localhost:5173
-
-Select MiniAI.
-
+Open: http://localhost:5173 and select **MiniAI**.  
 No Ollama installation or backend is required.
 
-Running W Edition
+---
+
+## Running W Edition
 
 W Edition requires Ollama, the Go backend and the Vue frontend.
 
-1. Install Ollama
+1. Install Ollama  
+   - Download: https://ollama.com/download  
+   - Verify: `ollama --version`
 
-Download Ollama from:
+2. Download the model  
+   - Default: `ollama pull qwen2.5-coder:3b`  
+   - List: `ollama list`  
+   - To change the model, update the name in `ai-backend/cmd/main.go`.
 
-https://ollama.com/download
+3. Start Ollama  
+   - Usually starts automatically.  
+   - If needed: `ollama serve`
 
-Verify the installation:
+4. Start the backend  
 
-ollama --version
-2. Download the model
+   ```bash
+   cd ai-backend
+   docker build -t ai-go .
+   docker run -p 8080:8080 ai-go
+   ```
 
-The default backend configuration uses:
+   API listens on `http://localhost:8080`.  
+   Dockerized backend reaches Ollama via `host.docker.internal:11434`.
 
-ollama pull qwen2.5-coder:3b
+5. Start the frontend  
 
-List installed models with:
+   ```bash
+   cd ..
+   npm install
+   npm run dev
+   ```
 
-ollama list
+   Open: http://localhost:5173 and select **W Edition**.
 
-To use another model, update the model name in:
+---
 
-ai-backend/cmd/main.go
-3. Start Ollama
+## Deployment note
 
-Ollama normally starts automatically.
+The Netlify deployment primarily demonstrates the browser-only MiniAI edition.  
+W Edition uses a local backend and local Ollama instance and is designed for local execution rather than public hosted inference.  
+A production Full Edition would need a remotely accessible backend and LLM runtime.
 
-If necessary:
+This separation is intentional: MiniAI provides a zero-install public demo, while W Edition demonstrates the complete **frontend → Go API → local LLM** architecture.
 
-ollama serve
-4. Start the backend
+---
 
-Open a terminal in:
+## Design decisions
 
-ai-backend
+### Why two editions?
 
-Build the Docker image:
+- LLM execution is fundamentally different from static frontend hosting.  
+- MiniAI keeps the project instantly testable in a browser.  
+- W Edition demonstrates real model integration without paid external AI APIs.
 
-docker build -t ai-go .
+### Why Go?
 
-Run the backend:
+- Small, efficient backend surface for HTTP, streaming and concurrent session state.  
+- Packages separate API handling, model communication, memory, prompts and rate limiting instead of a single monolithic server file.
 
-docker run -p 8080:8080 ai-go
+### Why local Ollama?
 
-The API listens on:
+- Designed to experiment with local model inference.  
+- Avoids coupling to proprietary hosted LLM APIs.  
+- Model can be replaced by changing Ollama configuration.
 
-http://localhost:8080
+### Why in-memory history?
 
-The Dockerized backend is configured to reach Ollama through host.docker.internal:11434.
+- Only short-lived interview context is needed.  
+- Avoids database persistence and operational overhead for a prototype.  
+- Bounded history prevents unbounded prompt growth.
 
-5. Start the frontend
+### Why streaming?
 
-From the repository root:
+- Waiting for full LLM responses makes chat UIs feel unresponsive.  
+- Backend forwards Ollama chunks as they arrive and the frontend renders incrementally.
 
-npm install
-npm run dev
+---
 
-Open:
+## Current limitations
 
-http://localhost:5173
+- W Edition requires a locally running Ollama instance.  
+- Public deployment does not provide hosted LLM inference.  
+- Session history is lost when the backend restarts.  
+- User IDs are session identifiers, not authenticated accounts.  
+- MiniAI evaluation is lightweight and heuristic-based.  
+- Judge score extraction depends on model following the requested format.  
+- CORS is open for development/demo.  
+- Backend and model configuration are defined in code, not environment variables.
 
-Select W Edition and follow the session setup flow.
+---
 
-Deployment note
+## Possible improvements
 
-The public Netlify deployment is primarily a demonstration of the browser-only MiniAI edition.
+Future iterations could add:
 
-W Edition currently uses a local backend endpoint and a locally running Ollama instance. It is therefore designed for local execution rather than public hosted inference.
+- Environment-based backend/model configuration.  
+- Persistent session storage.  
+- Authenticated user sessions.  
+- Structured JSON output for Judge results.  
+- Stronger score parsing and validation.  
+- Configurable interview length and difficulty.  
+- Custom job-role prompts.  
+- Resume or job-description context.  
+- Automated frontend and backend tests.  
+- Hosted inference support.  
+- Docker Compose for frontend, backend and Ollama.
 
-A production-hosted Full Edition would require a remotely accessible backend and an LLM runtime available to that backend.
+---
 
-This separation is intentional: MiniAI provides a zero-install public demonstration, while W Edition demonstrates the complete frontend → Go API → local LLM architecture.
+## What I explored
 
-Design decisions
-Why two editions?
+This project is a practical exploration of:
 
-Running an LLM is fundamentally different from deploying a static frontend.
+- Vue reactive UI state and component-driven frontend flow.  
+- Go HTTP services and frontend/backend integration.  
+- Local LLM inference, prompt design and streamed model responses.  
+- Short-term conversation memory and concurrency-safe shared state.  
+- Rate limiting and lightweight response parsing.  
+- Dockerized backend execution.
 
-MiniAI keeps the project immediately testable in a browser, while W Edition demonstrates real model integration without requiring a paid external AI API.
-
-Why Go?
-
-Go provides a small backend surface for HTTP handling, streaming and concurrent session state.
-
-The backend packages separate API handling, model communication, memory, prompts and rate limiting rather than placing the complete flow in a single server file.
-
-Why local Ollama?
-
-The project was designed to experiment with local model inference and avoid coupling the application to a proprietary hosted LLM API.
-
-The model can be replaced by changing the Ollama model configuration.
-
-Why in-memory history?
-
-The application only needs short-lived interview context.
-
-A database would add persistence and operational complexity that the current prototype does not require.
-
-The bounded history also prevents conversation context from growing indefinitely.
-
-Why streaming?
-
-Waiting for a complete LLM response makes chat interfaces feel unresponsive.
-
-The backend forwards Ollama chunks as they arrive, allowing the frontend to render the answer incrementally.
-
-Current limitations
-W Edition requires a locally running Ollama instance.
-The public deployment does not provide hosted LLM inference.
-Session history is lost when the backend restarts.
-User IDs are session identifiers, not authenticated accounts.
-MiniAI evaluation is intentionally lightweight and heuristic-based.
-Judge score extraction depends on the model following the requested score format.
-CORS is currently open for development and demonstration purposes.
-Backend and model configuration are currently defined in code rather than environment variables.
-Possible improvements
-
-Future iterations could include:
-
-environment-based backend and model configuration
-persistent session storage
-authenticated user sessions
-structured JSON output for Judge results
-stronger score parsing and validation
-configurable interview length and difficulty
-custom job-role prompts
-resume or job-description context
-automated frontend and backend tests
-hosted inference support
-Docker Compose for frontend, backend and Ollama orchestration
-What I explored with this project
-
-This project was built as a practical exploration of:
-
-Vue reactive UI state
-component-driven frontend flow
-Go HTTP services
-frontend/backend integration
-local LLM inference
-prompt design
-streamed model responses
-short-term conversation memory
-concurrency-safe shared state
-rate limiting
-lightweight response parsing
-Dockerized backend execution
-
-The main engineering challenge was connecting two very different execution paths — a zero-install browser simulation and a real local LLM workflow — behind the same interview interface.
+The main engineering challenge was connecting two different execution paths — a zero-install browser simulation and a real local LLM workflow — behind the same interview interface.
